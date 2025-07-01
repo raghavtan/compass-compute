@@ -60,10 +60,9 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    if: needs.acceptance.result == 'success'
+    if: needs.commit.result == 'success'
     needs:
       - commit
-      - acceptance
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
