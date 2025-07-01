@@ -1,0 +1,91 @@
+name: Deployment Pipeline
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  id-token: write
+  contents: write
+  actions: read
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.artifact-version.outputs.new_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: "0"
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: motain/onefootball-actions/pvt-deps@master
+        with:
+          github-token: ${{ secrets.PRIVATE_DEPENDENCIES_GITHUB_TOKEN }}
+      - uses: actions/cache@v4
+        with:
+          path: |
+            vendor
+            bin
+          key: ${{ hashFiles('go.mod') }}
+
+      - id: code-correctness
+        run: make setup deps check
+
+      - id: artifact-version
+        uses: anothrNick/github-tag-action@1.67.0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          WITH_V: true
+          RELEASE_BRANCHES: .*
+          DEFAULT_BUMP: patch
+
+      - id: build-binaries
+        run: make build-all VERSION=${{ steps.artifact-version.outputs.new_tag }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: ./bin
+
+      - uses: motain/slack-actions/cd/cycle-result@main
+        if: always()
+        with:
+          slack-token: ${{ secrets.CONTINUOUS_DELIVERY_APP_SLACK_TOKEN }}
+          channel: "cloud-runtime-hooks"
+          steps-context: ${{ toJson(steps) }}
+
+  release:
+    runs-on: ubuntu-latest
+    if: needs.acceptance.result == 'success'
+    needs:
+      - commit
+      - acceptance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: binaries
+          path: ./
+      - id: github-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create ${{ needs.commit.outputs.version }} \
+          --latest \
+          --generate-notes \
+            ./compass-compute-${{ needs.commit.outputs.version }}-darwin-amd64.tar.gz \
+            ./compass-compute-${{ needs.commit.outputs.version }}-darwin-arm64.tar.gz \
+            ./compass-compute-${{ needs.commit.outputs.version }}-linux-amd64.tar.gz \
+            ./compass-compute-${{ needs.commit.outputs.version }}-windows-amd64.zip \
+            --title "${{ needs.commit.outputs.version }}" \
+
+      - uses: motain/slack-actions/cd/cycle-result@main
+        if: always()
+        with:
+          slack-token: ${{ secrets.CONTINUOUS_DELIVERY_APP_SLACK_TOKEN }}
+          channel: "p-developer-xp-notifications"
+          steps-context: ${{ toJson(steps) }}
