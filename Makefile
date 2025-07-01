@@ -19,7 +19,7 @@ DOCKERIMAGE_TAG?=latest
 BINARY_NAME=compass-compute
 BUILD_DIR=bin
 BINARY_PATH=$(BUILD_DIR)/$(BINARY_NAME)
-CMD_DIR=./cmd/compass-compute
+CMD_DIR=./cmd
 
 # Version and build info
 VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
