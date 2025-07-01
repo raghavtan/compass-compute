@@ -26,12 +26,19 @@ jobs:
       - name: Add Go bin to PATH
         run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
-      - uses: actions/cache@v4
+      - name: Cache Go modules
+        uses: actions/cache@v4
         with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
           key: ${{ hashFiles('go.mod') }}
 
       - id: code-correctness
         run: make setup deps check
+
+      - id: test
+        run: make test test-race test-cover
 
       - id: artifact-version
         uses: anothrNick/github-tag-action@1.67.0
