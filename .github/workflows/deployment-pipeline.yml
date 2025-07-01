@@ -22,14 +22,12 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - uses: motain/onefootball-actions/pvt-deps@master
-        with:
-          github-token: ${{ secrets.PRIVATE_DEPENDENCIES_GITHUB_TOKEN }}
+
+      - name: Add Go bin to PATH
+        run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
       - uses: actions/cache@v4
         with:
-          path: |
-            vendor
-            bin
           key: ${{ hashFiles('go.mod') }}
 
       - id: code-correctness
@@ -50,13 +48,6 @@ jobs:
         with:
           name: binaries
           path: ./bin
-
-      - uses: motain/slack-actions/cd/cycle-result@main
-        if: always()
-        with:
-          slack-token: ${{ secrets.CONTINUOUS_DELIVERY_APP_SLACK_TOKEN }}
-          channel: "cloud-runtime-hooks"
-          steps-context: ${{ toJson(steps) }}
 
   release:
     runs-on: ubuntu-latest
@@ -80,11 +71,4 @@ jobs:
             ./compass-compute-${{ needs.commit.outputs.version }}-darwin-arm64.tar.gz \
             ./compass-compute-${{ needs.commit.outputs.version }}-linux-amd64.tar.gz \
             ./compass-compute-${{ needs.commit.outputs.version }}-windows-amd64.zip \
-            --title "${{ needs.commit.outputs.version }}" \
-
-      - uses: motain/slack-actions/cd/cycle-result@main
-        if: always()
-        with:
-          slack-token: ${{ secrets.CONTINUOUS_DELIVERY_APP_SLACK_TOKEN }}
-          channel: "p-developer-xp-notifications"
-          steps-context: ${{ toJson(steps) }}
+            --title "${{ needs.commit.outputs.version }}" 

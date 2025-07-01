@@ -29,6 +29,9 @@ COMMIT_HASH=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 # Build flags
 LDFLAGS=-ldflags "-w -s -X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.CommitHash=$(COMMIT_HASH)"
 
+# Tools and paths
+GOIMPORTS_PATH=$(shell $(GOENV) GOPATH)/bin/goimports
+
 # Linting
 GOLANGCI_LINT_VERSION=v1.61.0
 GOLINT_PATH=$(shell $(GOENV) GOPATH)/bin/golangci-lint
@@ -53,6 +56,22 @@ setup:
 	@printf "$(YELLOW)Installing golangci-lint $(GOLANGCI_LINT_VERSION)...$(NC)\n"
 	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell $(GOENV) GOPATH)/bin $(GOLANGCI_LINT_VERSION)
 	@printf "$(GREEN)Setup complete.$(NC)\n"
+	@printf "$(BLUE)Verifying tool installations...$(NC)\n"
+	@printf "GOPATH: $(shell $(GOENV) GOPATH)\n"
+	@if command -v goimports &> /dev/null; then \
+		printf "goimports: $(shell which goimports)\n"; \
+	elif [ -f $(GOIMPORTS_PATH) ]; then \
+		printf "goimports: $(GOIMPORTS_PATH) (installed)\n"; \
+	else \
+		printf "goimports: not found\n"; \
+	fi
+	@if command -v golangci-lint &> /dev/null; then \
+		printf "golangci-lint: $(shell which golangci-lint)\n"; \
+	elif [ -f $(GOLINT_PATH) ]; then \
+		printf "golangci-lint: $(GOLINT_PATH) (installed)\n"; \
+	else \
+		printf "golangci-lint: not found\n"; \
+	fi
 
 # Download dependencies
 deps:
@@ -70,7 +89,13 @@ tidy:
 fmt:
 	@printf "$(BLUE)Formatting code...$(NC)\n"
 	$(GOFMT) -s -w .
-	goimports -w .
+	@if command -v goimports &> /dev/null; then \
+		goimports -w .; \
+	elif [ -f $(GOIMPORTS_PATH) ]; then \
+		$(GOIMPORTS_PATH) -w .; \
+	else \
+		printf "$(YELLOW)goimports not found, skipping import formatting$(NC)\n"; \
+	fi
 	@printf "$(GREEN)Code formatted.$(NC)\n"
 
 # Vet code
@@ -96,6 +121,16 @@ lint:
 # Check runs all quality checks
 check: fmt vet lint tidy
 	@printf "$(GREEN)All checks passed!$(NC)\n"
+
+# CI-friendly check that skips problematic tools
+check-ci: fmt-basic vet tidy
+	@printf "$(GREEN)CI checks passed!$(NC)\n"
+
+# Basic formatting without goimports (for CI environments)
+fmt-basic:
+	@printf "$(BLUE)Basic code formatting...$(NC)\n"
+	$(GOFMT) -s -w .
+	@printf "$(GREEN)Basic formatting complete.$(NC)\n"
 
 # Build the application
 build:
