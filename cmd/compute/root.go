@@ -2,6 +2,7 @@ package compute
 
 import (
 	"fmt"
+	"github.com/motain/compass-compute/internal/module/compute"
 	"os"
 	"strings"
 
@@ -54,14 +55,11 @@ func run(config *Config) error {
 	}
 
 	fmt.Printf("Processing component: %s\n", config.ComponentName)
-
-	// GET component ID
-	// GET metricName, metricDefinitionID for all metrics associated with the component
-	// GET FactDefinitions for all metrics
-	// Clone component repository
-	// For each metric:
-	// 		compute all Facts to generate metric values for each metric
-	// 		Push computed metric values to the Compass API
+	err := compute.Process(config.ComponentName, config.Verbose)
+	if err != nil {
+		fmt.Errorf("failed to process component '%s': %v", config.ComponentName, err)
+		return err
+	}
 
 	if config.Verbose {
 		fmt.Printf("  - Validating component '%s'\n", config.ComponentName)
