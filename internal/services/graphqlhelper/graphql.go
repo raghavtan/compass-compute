@@ -5,23 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
-// ComponentByReference finds a component by name or ID and returns type and ID
+// ComponentByReference finds a component by name or ID and returns type, ID, and associated metrics
 func ComponentByReference(name, token, cloudId, baseUrl string) (*ComponentReference, error) {
 	component, err := searchComponentByName(name, token, cloudId, baseUrl)
 	if err != nil {
 		return nil, fmt.Errorf("component not found: %w", err)
 	}
 
-	return &ComponentReference{
-		ComponentType: component.Type,
-		ComponentID:   component.ID,
-	}, nil
+	return component, nil
 }
 
-// searchComponentByName searches for a component by name
-func searchComponentByName(name, token, cloudId, baseUrl string) (*struct{ ID, Name, Type string }, error) {
+// searchComponentByName searches for a component by name and returns component with associated metrics
+func searchComponentByName(name, token, cloudId, baseUrl string) (*ComponentReference, error) {
 	query := `
 		query getComponentBySlug($cloudId: ID!, $slug: String!) {
 			compass {
@@ -55,35 +53,36 @@ func searchComponentByName(name, token, cloudId, baseUrl string) (*struct{ ID, N
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf(string(response))
 
-	var searchResponse ComponentsSearchResponse
-	if err := json.Unmarshal(response, &searchResponse); err != nil {
-		return nil, fmt.Errorf("failed to parse search response: %w", err)
+	var componentResponse ComponentByReferenceResponse
+	if err := json.Unmarshal(response, &componentResponse); err != nil {
+		return nil, fmt.Errorf("failed to parse component response: %w", err)
 	}
 
-	// Find exact match by name
-	for _, node := range searchResponse.Data.Compass.ComponentByReference.Nodes {
-		if node.Name == name {
-			return &struct{ ID, Name, Type string }{
-				ID:   node.ID,
-				Name: node.Name,
-				Type: node.Type,
-			}, nil
+	component := componentResponse.Data.Compass.ComponentByReference
+
+	// Check if component was found
+	if component.ID == "" {
+		return nil, fmt.Errorf("no component found with name: %s", name)
+	}
+
+	// Extract associated metrics from metricSources
+	var associatedMetrics []AssociatedMetric
+	for _, metricSource := range component.MetricSources.Nodes {
+		if !strings.Contains(metricSource.MetricDefinition.ID, "builtin") {
+			associatedMetrics = append(associatedMetrics, AssociatedMetric{
+				MetricName:         metricSource.MetricDefinition.Name,
+				MetricDefinitionID: metricSource.MetricDefinition.ID,
+				MetricSourceID:     metricSource.ID,
+			})
 		}
 	}
 
-	// If no exact match, return first result if available
-	if len(searchResponse.Data.Compass.ComponentByReference.Nodes) > 0 {
-		node := searchResponse.Data.Compass.ComponentByReference.Nodes[0]
-		return &struct{ ID, Name, Type string }{
-			ID:   node.ID,
-			Name: node.Name,
-			Type: node.Type,
-		}, nil
-	}
-
-	return nil, fmt.Errorf("no component found with name: %s", name)
+	return &ComponentReference{
+		ComponentType:     component.Type,
+		ComponentID:       component.ID,
+		AssociatedMetrics: associatedMetrics,
+	}, nil
 }
 
 // executeGraphQLQuery executes a GraphQL query against the Compass API

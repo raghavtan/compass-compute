@@ -16,7 +16,6 @@ type Metric struct {
 	APIVersion string   `yaml:"apiVersion"`
 	Kind       string   `yaml:"kind"`
 	Metadata   Metadata `yaml:"metadata"`
-	Facts      []Fact   `yaml:"facts,omitempty"`
 	Spec       Spec     `yaml:"spec"`
 }
 
@@ -25,6 +24,7 @@ type Metadata struct {
 	Name          string            `yaml:"name"`
 	Labels        map[string]string `yaml:"labels"`
 	ComponentType []string          `yaml:"componentType"`
+	Facts         []Fact            `yaml:"facts,omitempty"`
 }
 
 // Fact represents individual facts/checks within a metric
