@@ -19,6 +19,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: "0"
+
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -34,13 +35,17 @@ jobs:
             ~/go/pkg/mod
           key: ${{ hashFiles('go.mod') }}
 
-      - id: code-correctness
-        run: make setup deps check
+      - name: Setup development tools
+        run: make setup deps
 
-      - id: test
+      - name: Run code quality checks (CI-friendly)
+        run: make check-ci
+
+      - name: Run tests
         run: make test test-race test-cover
 
-      - id: artifact-version
+      - name: Generate version tag
+        id: artifact-version
         uses: anothrNick/github-tag-action@1.67.0
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -48,8 +53,19 @@ jobs:
           RELEASE_BRANCHES: .*
           DEFAULT_BUMP: patch
 
-      - id: build-binaries
+      - name: Build multi-platform binaries
         run: make build-all VERSION=${{ steps.artifact-version.outputs.new_tag }}
+
+      - name: Create release archives
+        run: |
+          cd bin
+          # Create tar.gz for Unix platforms
+          tar -czf compass-compute-${{ steps.artifact-version.outputs.new_tag }}-linux-amd64.tar.gz compass-compute-linux-amd64
+          tar -czf compass-compute-${{ steps.artifact-version.outputs.new_tag }}-darwin-amd64.tar.gz compass-compute-darwin-amd64
+          tar -czf compass-compute-${{ steps.artifact-version.outputs.new_tag }}-darwin-arm64.tar.gz compass-compute-darwin-arm64
+          
+          # Create zip for Windows
+          zip compass-compute-${{ steps.artifact-version.outputs.new_tag }}-windows-amd64.zip compass-compute-windows-amd64.exe
 
       - uses: actions/upload-artifact@v4
         with:
@@ -63,19 +79,21 @@ jobs:
       - commit
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: binaries
-          path: ./
-      - id: github-release
+          path: ./bin
+
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create ${{ needs.commit.outputs.version }} \
-          --latest \
-          --generate-notes \
-            ./compass-compute-${{ needs.commit.outputs.version }}-darwin-amd64.tar.gz \
-            ./compass-compute-${{ needs.commit.outputs.version }}-darwin-arm64.tar.gz \
-            ./compass-compute-${{ needs.commit.outputs.version }}-linux-amd64.tar.gz \
-            ./compass-compute-${{ needs.commit.outputs.version }}-windows-amd64.zip \
-            --title "${{ needs.commit.outputs.version }}" 
+            --latest \
+            --generate-notes \
+            --title "${{ needs.commit.outputs.version }}" \
+            ./bin/compass-compute-${{ needs.commit.outputs.version }}-darwin-amd64.tar.gz \
+            ./bin/compass-compute-${{ needs.commit.outputs.version }}-darwin-arm64.tar.gz \
+            ./bin/compass-compute-${{ needs.commit.outputs.version }}-linux-amd64.tar.gz \
+            ./bin/compass-compute-${{ needs.commit.outputs.version }}-windows-amd64.zip

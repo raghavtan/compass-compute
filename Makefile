@@ -19,6 +19,7 @@ DOCKERIMAGE_TAG?=latest
 BINARY_NAME=compass-compute
 BUILD_DIR=bin
 BINARY_PATH=$(BUILD_DIR)/$(BINARY_NAME)
+# Updated for Cobra structure - build from root directory
 CMD_DIR=./cmd
 
 # Version and build info
@@ -26,15 +27,16 @@ VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 BUILD_TIME=$(shell date -u '+%Y-%m-%d_%H:%M:%S')
 COMMIT_HASH=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-# Build flags
-LDFLAGS=-ldflags "-w -s -X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.CommitHash=$(COMMIT_HASH)"
+# Build flags - Updated for Cobra structure
+LDFLAGS=-ldflags "-w -s -X github.com/motain/compass-compute/cmd.Version=$(VERSION) -X github.com/motain/compass-compute/cmd.BuildTime=$(BUILD_TIME) -X github.com/motain/compass-compute/cmd.CommitHash=$(COMMIT_HASH)"
 
-# Tools and paths
-GOIMPORTS_PATH=$(shell $(GOENV) GOPATH)/bin/goimports
+# Tools and paths - More robust path detection
+GOPATH_BIN=$(shell $(GOENV) GOPATH)/bin
+GOIMPORTS_PATH=$(GOPATH_BIN)/goimports
+GOLINT_PATH=$(GOPATH_BIN)/golangci-lint
 
 # Linting
 GOLANGCI_LINT_VERSION=v1.61.0
-GOLINT_PATH=$(shell $(GOENV) GOPATH)/bin/golangci-lint
 
 # Colors for output
 RED=\033[0;31m
@@ -54,23 +56,20 @@ setup:
 	$(GOGET) golang.org/x/tools/cmd/goimports
 	$(GOGET) github.com/incu6us/goimports-reviser/v3
 	@printf "$(YELLOW)Installing golangci-lint $(GOLANGCI_LINT_VERSION)...$(NC)\n"
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell $(GOENV) GOPATH)/bin $(GOLANGCI_LINT_VERSION)
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH_BIN) $(GOLANGCI_LINT_VERSION)
 	@printf "$(GREEN)Setup complete.$(NC)\n"
 	@printf "$(BLUE)Verifying tool installations...$(NC)\n"
 	@printf "GOPATH: $(shell $(GOENV) GOPATH)\n"
-	@if command -v goimports &> /dev/null; then \
-		printf "goimports: $(shell which goimports)\n"; \
-	elif [ -f $(GOIMPORTS_PATH) ]; then \
-		printf "goimports: $(GOIMPORTS_PATH) (installed)\n"; \
+	@printf "GOPATH/bin: $(GOPATH_BIN)\n"
+	@if [ -f $(GOIMPORTS_PATH) ]; then \
+		printf "goimports: $(GOIMPORTS_PATH) ✓\n"; \
 	else \
-		printf "goimports: not found\n"; \
+		printf "goimports: not found ✗\n"; \
 	fi
-	@if command -v golangci-lint &> /dev/null; then \
-		printf "golangci-lint: $(shell which golangci-lint)\n"; \
-	elif [ -f $(GOLINT_PATH) ]; then \
-		printf "golangci-lint: $(GOLINT_PATH) (installed)\n"; \
+	@if [ -f $(GOLINT_PATH) ]; then \
+		printf "golangci-lint: $(GOLINT_PATH) ✓\n"; \
 	else \
-		printf "golangci-lint: not found\n"; \
+		printf "golangci-lint: not found ✗\n"; \
 	fi
 
 # Download dependencies
@@ -85,18 +84,30 @@ tidy:
 	$(GOMOD) tidy
 	@printf "$(GREEN)Go module files tidied.$(NC)\n"
 
-# Format code
+# Format code - Fixed for CI environments
 fmt:
 	@printf "$(BLUE)Formatting code...$(NC)\n"
 	$(GOFMT) -s -w .
-	@if command -v goimports &> /dev/null; then \
+	@# Try multiple ways to find and run goimports
+	@if command -v goimports >/dev/null 2>&1; then \
+		printf "$(BLUE)Running goimports (from PATH)...$(NC)\n"; \
 		goimports -w .; \
 	elif [ -f $(GOIMPORTS_PATH) ]; then \
+		printf "$(BLUE)Running goimports (from GOPATH)...$(NC)\n"; \
 		$(GOIMPORTS_PATH) -w .; \
+	elif [ -f "$(GOPATH_BIN)/goimports" ]; then \
+		printf "$(BLUE)Running goimports (direct path)...$(NC)\n"; \
+		"$(GOPATH_BIN)/goimports" -w .; \
 	else \
 		printf "$(YELLOW)goimports not found, skipping import formatting$(NC)\n"; \
 	fi
 	@printf "$(GREEN)Code formatted.$(NC)\n"
+
+# Basic formatting without goimports (for CI environments with issues)
+fmt-basic:
+	@printf "$(BLUE)Basic code formatting...$(NC)\n"
+	$(GOFMT) -s -w .
+	@printf "$(GREEN)Basic formatting complete.$(NC)\n"
 
 # Vet code
 vet:
@@ -104,17 +115,23 @@ vet:
 	$(GOVET) ./...
 	@printf "$(GREEN)Code vetted.$(NC)\n"
 
-# Lint code with fallback
+# Lint code with better fallback logic
 lint:
 	@printf "$(BLUE)Linting code...$(NC)\n"
-	@if ! command -v $(GOLINT_PATH) &> /dev/null; then \
-		printf "$(RED)golangci-lint not found. Please run 'make setup' first.$(NC)\n"; \
-		exit 1; \
-	fi
-	@if ! $(GOLINT_PATH) run ./... 2>/dev/null; then \
-		printf "$(YELLOW)golangci-lint failed, running basic go vet instead...$(NC)\n"; \
+	@# Try multiple ways to find and run golangci-lint
+	@if command -v golangci-lint >/dev/null 2>&1; then \
+		printf "$(BLUE)Running golangci-lint (from PATH)...$(NC)\n"; \
+		golangci-lint run ./...; \
+	elif [ -f $(GOLINT_PATH) ]; then \
+		printf "$(BLUE)Running golangci-lint (from GOPATH)...$(NC)\n"; \
+		$(GOLINT_PATH) run ./...; \
+	elif [ -f "$(GOPATH_BIN)/golangci-lint" ]; then \
+		printf "$(BLUE)Running golangci-lint (direct path)...$(NC)\n"; \
+		"$(GOPATH_BIN)/golangci-lint" run ./...; \
+	else \
+		printf "$(YELLOW)golangci-lint not found, running basic go vet instead...$(NC)\n"; \
 		$(GOVET) ./...; \
-		printf "$(YELLOW)Consider updating golangci-lint: make setup$(NC)\n"; \
+		printf "$(YELLOW)Consider running 'make setup' to install golangci-lint$(NC)\n"; \
 	fi
 	@printf "$(GREEN)Linting complete.$(NC)\n"
 
@@ -122,15 +139,9 @@ lint:
 check: fmt vet lint tidy
 	@printf "$(GREEN)All checks passed!$(NC)\n"
 
-# CI-friendly check that skips problematic tools
-check-ci: fmt-basic vet tidy
+# CI-friendly check that uses basic formatting
+check-ci: fmt-basic vet lint tidy
 	@printf "$(GREEN)CI checks passed!$(NC)\n"
-
-# Basic formatting without goimports (for CI environments)
-fmt-basic:
-	@printf "$(BLUE)Basic code formatting...$(NC)\n"
-	$(GOFMT) -s -w .
-	@printf "$(GREEN)Basic formatting complete.$(NC)\n"
 
 # Build the application
 build:
@@ -186,13 +197,13 @@ docker-run:
 # Install binary to GOPATH/bin
 install: build
 	@printf "$(BLUE)Installing $(BINARY_NAME)...$(NC)\n"
-	cp $(BINARY_PATH) $(shell $(GOENV) GOPATH)/bin/
-	@printf "$(GREEN)$(BINARY_NAME) installed to $(shell $(GOENV) GOPATH)/bin/$(NC)\n"
+	cp $(BINARY_PATH) $(GOPATH_BIN)/
+	@printf "$(GREEN)$(BINARY_NAME) installed to $(GOPATH_BIN)/$(NC)\n"
 
 # Uninstall binary from GOPATH/bin
 uninstall:
 	@printf "$(BLUE)Uninstalling $(BINARY_NAME)...$(NC)\n"
-	rm -f $(shell $(GOENV) GOPATH)/bin/$(BINARY_NAME)
+	rm -f $(GOPATH_BIN)/$(BINARY_NAME)
 	@printf "$(GREEN)$(BINARY_NAME) uninstalled.$(NC)\n"
 
 # Clean build artifacts
@@ -212,10 +223,12 @@ help:
 	@printf "  $(GREEN)setup$(NC)           Install development tools and linters\n"
 	@printf "  $(GREEN)deps$(NC)            Download and verify dependencies\n"
 	@printf "  $(GREEN)tidy$(NC)            Tidy go.mod and go.sum files\n"
-	@printf "  $(GREEN)fmt$(NC)             Format Go code\n"
+	@printf "  $(GREEN)fmt$(NC)             Format Go code (with goimports)\n"
+	@printf "  $(GREEN)fmt-basic$(NC)       Format Go code (basic, no goimports)\n"
 	@printf "  $(GREEN)vet$(NC)             Run go vet\n"
 	@printf "  $(GREEN)lint$(NC)            Run golangci-lint\n"
 	@printf "  $(GREEN)check$(NC)           Run all quality checks (fmt, vet, lint, tidy)\n"
+	@printf "  $(GREEN)check-ci$(NC)        Run CI-friendly checks (fmt-basic, vet, lint, tidy)\n"
 	@printf "\n$(YELLOW)Build Targets:$(NC)\n"
 	@printf "  $(GREEN)build$(NC)           Build the application\n"
 	@printf "  $(GREEN)build-all$(NC)       Build for multiple platforms\n"
