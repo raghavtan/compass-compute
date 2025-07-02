@@ -36,7 +36,7 @@ GOIMPORTS_PATH=$(GOPATH_BIN)/goimports
 GOLINT_PATH=$(GOPATH_BIN)/golangci-lint
 
 # Linting
-GOLANGCI_LINT_VERSION=v1.61.0
+GOLANGCI_LINT_VERSION=v2.2.1
 
 # Colors for output
 RED=\033[0;31m
