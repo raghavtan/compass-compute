@@ -14,18 +14,25 @@ type Metric struct {
 }
 
 type Fact struct {
-	ID           string      `json:"id"`
-	Name         string      `json:"name"`
-	Type         string      `json:"type"`
-	Source       string      `json:"source,omitempty"`
-	Repo         string      `json:"repo,omitempty"`
-	FilePath     string      `json:"filePath,omitempty"`
-	JSONPath     interface{} `json:"jsonPath,omitempty"`
-	Rule         string      `json:"rule,omitempty"`
-	Method       string      `json:"method,omitempty"`
-	URI          string      `json:"uri,omitempty"`
-	Pattern      string      `json:"pattern,omitempty"`
-	SearchString string      `json:"searchString,omitempty"`
+	ID              string      `json:"id"`
+	Name            string      `json:"name"`
+	Type            string      `json:"type"`
+	Source          string      `json:"source,omitempty"`
+	Repo            string      `json:"repo,omitempty"`
+	FilePath        string      `json:"filePath,omitempty"`
+	JSONPath        interface{} `json:"jsonPath,omitempty"`
+	Rule            string      `json:"rule,omitempty"`
+	Auth            interface{} `json:"auth,omitempty"`
+	DependsOn       []string    `json:"dependsOn,omitempty"`
+	Method          string      `json:"method,omitempty"`
+	URI             string      `json:"uri,omitempty"`
+	Pattern         string      `json:"pattern,omitempty"`
+	SearchString    string      `json:"searchString,omitempty"`
+	PrometheusQuery string      `json:"prometheusQuery,omitempty"`
+
+	// Runtime fields
+	Result interface{} `json:"-"`
+	Done   bool        `json:"-"`
 }
 
 type MetricDefinition struct {

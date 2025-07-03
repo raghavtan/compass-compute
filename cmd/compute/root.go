@@ -46,6 +46,14 @@ var versionCmd = &cobra.Command{
 	},
 }
 
+var serveCmd = &cobra.Command{
+	Use:   "serve",
+	Short: "Run the compass-compute server",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return fmt.Errorf("server mode is not implemented yet")
+	},
+}
+
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
@@ -55,4 +63,5 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(serveCmd)
 }
