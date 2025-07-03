@@ -5,38 +5,45 @@ import (
 	"os"
 	"strings"
 
-	"github.com/motain/compass-compute/internal/module/compute"
-
+	"github.com/motain/compass-compute/internal/compute"
 	"github.com/spf13/cobra"
+)
+
+var (
+	verbose    bool
+	Version    = "dev"
+	BuildTime  = "unknown"
+	CommitHash = "unknown"
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "compass-compute <component-name>",
 	Short: "A tool to manage compass components",
-	Long: `compass-compute is a CLI tool for managing compass components.
-It processes components by validating them and executing various operations.`,
-	Args: cobra.ExactArgs(1),
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		componentName := strings.TrimSpace(args[0])
-		if componentName == "" {
-			return fmt.Errorf("component name cannot be empty")
-		}
-
-		if err := validateComponentName(componentName); err != nil {
+	Long:  `compass-compute is a CLI tool for managing compass components.`,
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		name := strings.TrimSpace(args[0])
+		if err := validateComponentName(name); err != nil {
 			return fmt.Errorf("invalid component name: %w", err)
 		}
 
-		config = &Config{
-			ComponentName: componentName,
+		config := &Config{
+			ComponentName: name,
 			Verbose:       verbose,
 		}
-		return nil
-	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return run(config)
+		return compute.Process((*compute.Config)(config))
 	},
 	Example: `  compass-compute my-component
   compass-compute --verbose my-component`,
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Show version information",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("compass-compute\nVersion: %s\nBuilt: %s\nCommit: %s\n",
+			Version, BuildTime, CommitHash)
+	},
 }
 
 func Execute() {
@@ -47,32 +54,5 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
-}
-
-// Processing functions
-func run(config *Config) error {
-	if config.Verbose {
-		fmt.Printf("Starting compass-compute with component: %s\n", config.ComponentName)
-	}
-
-	fmt.Printf("Processing component: %s\n", config.ComponentName)
-	err := compute.Process(config.ComponentName, config.Verbose)
-	if err != nil {
-		fmt.Printf("failed to process component '%s': %v", config.ComponentName, err)
-		return err
-	}
-
-	if config.Verbose {
-		fmt.Printf("  - Validating component '%s'\n", config.ComponentName)
-		fmt.Printf("  - Executing component operations\n")
-		fmt.Printf("  - Finalizing component processing\n")
-	}
-
-	fmt.Printf("Component '%s' processed successfully\n", config.ComponentName)
-
-	if config.Verbose {
-		fmt.Println("Component processing completed successfully")
-	}
-
-	return nil
+	rootCmd.AddCommand(versionCmd)
 }
