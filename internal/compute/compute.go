@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/motain/compass-compute/internal/facts"
+
 	"github.com/motain/compass-compute/internal/services"
 )
 
@@ -19,7 +21,6 @@ func Process(config *Config) error {
 
 	compass := services.NewCompassService()
 
-	// Get component with metrics
 	component, err := compass.GetComponent(config.ComponentName)
 	if err != nil {
 		return fmt.Errorf("failed to get component '%s': %w", config.ComponentName, err)
@@ -30,12 +31,11 @@ func Process(config *Config) error {
 			component.Name, component.ID, component.Type, len(component.Metrics))
 	}
 
-	// Clone repositories
 	cloner := services.NewGitHubCloner(os.Getenv("GITHUB_TOKEN"))
 	repos := []string{config.ComponentName, services.CatalogRepo}
 
 	for _, repo := range repos {
-		if err := cloner.Clone("motain", repo, "./repos/"); err != nil {
+		if err := cloner.Clone(services.GitHubOrg, repo, "./repos/"); err != nil {
 			return fmt.Errorf("failed to clone repository '%s': %w", repo, err)
 		}
 		if config.Verbose {
@@ -50,7 +50,7 @@ func Process(config *Config) error {
 			fmt.Printf("Processing metric: %s (ID: %s)\n", metric.Name, metric.DefinitionID)
 		}
 
-		_, err := compass.GetMetricFacts(metric.Name, component.Type)
+		metricFacts, err := compass.GetMetricFacts(metric.Name, component.Type)
 		if err != nil {
 			if config.Verbose {
 				fmt.Printf("Warning: failed to get metric facts for '%s': %v\n", metric.Name, err)
@@ -58,8 +58,16 @@ func Process(config *Config) error {
 			continue
 		}
 
-		// TODO: Implement facts.EvaluateMetric when available
-		value := "1"
+		evaluatedResult, err := facts.EvaluateMetric(metricFacts, component.Name)
+		if err != nil {
+			if config.Verbose {
+				fmt.Printf("Warning: failed to evaluate metric '%s': %v\n", metric.Name, err)
+			}
+			continue
+		}
+
+		// Convert result to string for submission
+		value := fmt.Sprintf("%v", evaluatedResult)
 
 		if config.Verbose {
 			fmt.Printf("Evaluated metric '%s' with value: %s\n", metric.Name, value)

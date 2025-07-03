@@ -26,54 +26,15 @@ func NewCompassService() *CompassService {
 }
 
 func (cs *CompassService) GetComponent(name string) (*Component, error) {
-	query := `
-		query getComponent($cloudId: ID!, $slug: String!) {
-			compass {
-				componentByReference(reference: {slug: {slug: $slug, cloudId: $cloudId}}) {
-					... on CompassComponent {
-						id name type
-						metricSources {
-							... on CompassComponentMetricSourcesConnection {
-								nodes {
-									id
-									metricDefinition { name id }
-								}
-							}
-						}
-					}
-				}
-			}
-		}`
 
 	variables := map[string]interface{}{
 		"cloudId": cs.cloudID,
-		"slug":    "svc-" + name,
+		"slug":    ServiceSlugPrefix + name,
 	}
 
 	respData, err := cs.graphqlRequest(query, variables)
 	if err != nil {
 		return nil, err
-	}
-
-	var response struct {
-		Data struct {
-			Compass struct {
-				ComponentByReference struct {
-					ID            string `json:"id"`
-					Name          string `json:"name"`
-					Type          string `json:"type"`
-					MetricSources struct {
-						Nodes []struct {
-							ID               string `json:"id"`
-							MetricDefinition struct {
-								Name string `json:"name"`
-								ID   string `json:"id"`
-							} `json:"metricDefinition"`
-						} `json:"nodes"`
-					} `json:"metricSources"`
-				} `json:"componentByReference"`
-			} `json:"compass"`
-		} `json:"data"`
 	}
 
 	if err := json.Unmarshal(respData, &response); err != nil {
@@ -112,7 +73,7 @@ func (cs *CompassService) PutMetric(componentID, metricDefinitionID, value strin
 		"componentId":        componentID,
 	}
 
-	_, err := cs.httpRequest("POST", MetricsEndpoint, payload)
+	_, err := cs.httpRequest("PUT", MetricsEndpoint, payload)
 	return err
 }
 
