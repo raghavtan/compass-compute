@@ -23,11 +23,11 @@ type CloneOptions struct {
 // NewGitHubCloner creates a new GitHub cloner
 func NewGitHubCloner(token string) *GitHubCloner {
 	if token == "" {
-		fmt.Errorf("GITHUB_TOKEN environment variable is not set")
+		fmt.Printf("GITHUB_TOKEN environment variable is not set")
 		os.Exit(1)
 	}
 	if !IsGitAvailable() {
-		fmt.Errorf("git is not installed or not available in PATH")
+		fmt.Printf("git is not installed or not available in PATH")
 		os.Exit(1)
 	}
 	return &GitHubCloner{
@@ -92,7 +92,7 @@ func (gc *GitHubCloner) Clone(owner, repo string, opts *CloneOptions) error {
 	// Add URL and destination
 	repoPath := filepath.Join(opts.Destination, repo)
 	args = append(args, cloneURL, repoPath)
-	
+
 	if _, err := os.Stat(repoPath); !os.IsNotExist(err) {
 		if err := os.RemoveAll(repoPath); err != nil {
 			return fmt.Errorf("failed to remove existing repository directory: %w", err)

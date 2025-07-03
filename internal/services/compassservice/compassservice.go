@@ -5,15 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/motain/compass-compute/internal/services"
-	"github.com/motain/compass-compute/internal/services/graphqlhelper"
-	"github.com/motain/compass-compute/internal/services/metrics"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/motain/compass-compute/internal/services"
+	"github.com/motain/compass-compute/internal/services/graphqlhelper"
+	"github.com/motain/compass-compute/internal/services/metrics"
 )
 
 type Service struct {
@@ -101,7 +102,7 @@ func (cs *Service) GetMetricFactsByName(metricName string, componentType string)
 	for _, metric := range metricStore {
 		if metric.Metadata.Name == metricName {
 			for _, ct := range metric.Metadata.ComponentType {
-				if strings.ToLower(ct) == strings.ToLower(componentType) {
+				if strings.EqualFold(ct, componentType) {
 					return &metric.Metadata.Facts, nil
 				}
 			}
@@ -124,9 +125,7 @@ func (cs *Service) makeAPIRequest(method string, endpoint string, payload interf
 		}
 	}
 
-	// Create HTTP request
-	fullURL := cs.baseUrl + endpoint
-	req, err := http.NewRequest(method, fullURL, bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest(method, endpoint, bytes.NewBuffer(requestBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -146,7 +145,12 @@ func (cs *Service) makeAPIRequest(method string, endpoint string, payload interf
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Printf("Error closing response body: %v", err)
+		}
+	}(resp.Body)
 
 	// Read response body
 	body, err := io.ReadAll(resp.Body)

@@ -2,10 +2,11 @@ package compute
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/motain/compass-compute/internal/services"
 	"github.com/motain/compass-compute/internal/services/compassservice"
 	"github.com/motain/compass-compute/internal/services/github"
-	"os"
 )
 
 func Process(componentName string, verbose bool) error {
@@ -73,8 +74,7 @@ func Process(componentName string, verbose bool) error {
 		// Submit the metric value to Compass
 		err = compass.PutMetric(component.ComponentID, associatedMetric.MetricDefinitionID, evaluatedMetricValue)
 		if err != nil {
-			fmt.Errorf("failed to put metric '%s' for component '%s': %w",
-				associatedMetric.MetricName, componentName, err)
+			fmt.Printf("Error submitting metric '%s' for component '%s': %v\n", associatedMetric.MetricName, componentName, err)
 			continue
 		}
 

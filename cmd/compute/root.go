@@ -2,9 +2,10 @@ package compute
 
 import (
 	"fmt"
-	"github.com/motain/compass-compute/internal/module/compute"
 	"os"
 	"strings"
+
+	"github.com/motain/compass-compute/internal/module/compute"
 
 	"github.com/spf13/cobra"
 )
@@ -57,7 +58,7 @@ func run(config *Config) error {
 	fmt.Printf("Processing component: %s\n", config.ComponentName)
 	err := compute.Process(config.ComponentName, config.Verbose)
 	if err != nil {
-		fmt.Errorf("failed to process component '%s': %v", config.ComponentName, err)
+		fmt.Printf("failed to process component '%s': %v", config.ComponentName, err)
 		return err
 	}
 

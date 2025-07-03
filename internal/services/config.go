@@ -9,7 +9,7 @@ const (
 
 	DefaultMetricLocalPath = "./repos/" + DefaultCatalogRepo + "/" + DefaultCatalogRepoMetricPath
 
-	DefaultCompassMetricsEndpoint = "https://onefootball.atlassian.netgateway/api/compass/v1/metrics"
+	DefaultCompassMetricsEndpoint = "https://onefootball.atlassian.net/gateway/api/compass/v1/metrics"
 
 	DefaultCompassAPIBaseURL = "https://onefootball.atlassian.net/gateway/api/graphql"
 )
