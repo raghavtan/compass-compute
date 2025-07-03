@@ -73,7 +73,7 @@ func (cs *CompassService) PutMetric(componentID, metricDefinitionID, value strin
 		"componentId":        componentID,
 	}
 
-	_, err := cs.httpRequest("PUT", MetricsEndpoint, payload)
+	_, err := cs.httpRequest("POST", MetricsEndpoint, payload)
 	return err
 }
 

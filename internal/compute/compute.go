@@ -47,7 +47,7 @@ func Process(config *Config) error {
 	processed := 0
 	for _, metric := range component.Metrics {
 		if config.Verbose {
-			fmt.Printf("Processing metric: %s (ID: %s)\n", metric.Name, metric.DefinitionID)
+			fmt.Printf("Processing metric: %s\n", metric.Name)
 		}
 
 		metricFacts, err := compass.GetMetricFacts(metric.Name, component.Type)

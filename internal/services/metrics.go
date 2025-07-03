@@ -42,8 +42,8 @@ func (mp *MetricsParser) ParseMetrics() ([]MetricDefinition, error) {
 	return metrics, err
 }
 
-func (mp *MetricsParser) parseYAMLFile(filePath string) ([]MetricDefinition, error) {
-	content, err := os.ReadFile(filePath)
+func (mp *MetricsParser) parseYAMLFile(yamlFilePath string) ([]MetricDefinition, error) {
+	content, err := os.ReadFile(yamlFilePath)
 	if err != nil {
 		return nil, err
 	}
