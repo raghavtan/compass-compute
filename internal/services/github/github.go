@@ -92,6 +92,12 @@ func (gc *GitHubCloner) Clone(owner, repo string, opts *CloneOptions) error {
 	// Add URL and destination
 	repoPath := filepath.Join(opts.Destination, repo)
 	args = append(args, cloneURL, repoPath)
+	
+	if _, err := os.Stat(repoPath); !os.IsNotExist(err) {
+		if err := os.RemoveAll(repoPath); err != nil {
+			return fmt.Errorf("failed to remove existing repository directory: %w", err)
+		}
+	}
 
 	// Execute git clone
 	cmd := exec.Command("git", args...)
