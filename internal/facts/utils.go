@@ -1,6 +1,8 @@
 package facts
 
-import "strconv"
+import (
+	"strconv"
+)
 
 func convertToFloat64(value interface{}) *float64 {
 	switch v := value.(type) {
@@ -23,10 +25,9 @@ func convertToFloat64(value interface{}) *float64 {
 		if v {
 			f := 1.0
 			return &f
-		} else {
-			f := 0.0
-			return &f
 		}
+		f := 0.0
+		return &f
 	}
 	return nil
 }

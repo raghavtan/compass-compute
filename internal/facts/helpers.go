@@ -2,11 +2,11 @@ package facts
 
 import (
 	"encoding/json"
+	"fmt"
 	"regexp"
-	"strconv"
-	"strings"
 
 	"github.com/motain/compass-compute/internal/services"
+	"github.com/pelletier/go-toml/v2"
 )
 
 func replacePlaceholders(fact services.Fact, componentName string) services.Fact {
@@ -44,35 +44,13 @@ func getDependencyResults(fact *services.Fact, factMap map[string]*services.Fact
 }
 
 func convertTOMLToJSON(tomlData []byte) ([]byte, error) {
-	var result map[string]interface{}
+	var config map[string]interface{}
 
-	lines := strings.Split(string(tomlData), "\n")
-	result = make(map[string]interface{})
-
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		if strings.Contains(line, "=") {
-			parts := strings.SplitN(line, "=", 2)
-			if len(parts) == 2 {
-				key := strings.TrimSpace(parts[0])
-				value := strings.TrimSpace(parts[1])
-
-				value = strings.Trim(value, `"`)
-
-				if num, err := strconv.ParseFloat(value, 64); err == nil {
-					result[key] = num
-				} else if value == "true" || value == "false" {
-					result[key] = value == "true"
-				} else {
-					result[key] = value
-				}
-			}
-		}
+	// Use a proper TOML parser that preserves structure
+	if err := toml.Unmarshal(tomlData, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse TOML: %w", err)
 	}
 
-	return json.Marshal(result)
+	// Convert to JSON while preserving nested structure
+	return json.Marshal(config)
 }

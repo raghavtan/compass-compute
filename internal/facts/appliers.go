@@ -16,9 +16,12 @@ func (fe *FactEvaluator) applyRule(fact *services.Fact, data []byte) (interface{
 	case "notempty":
 		return len(data) > 0, nil
 	case "search":
-		return fact.Result, nil // Already processed in extractFromGitHub
+		var result bool
+		if err := json.Unmarshal(data, &result); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal search result: %w", err)
+		}
+		return result, nil
 	default:
-		// Hook for custom rule appliers
 		return fe.applyCustomRule(fact, data)
 	}
 }
@@ -29,7 +32,7 @@ func (fe *FactEvaluator) applyCustomRule(fact *services.Fact, data []byte) (inte
 
 func (fe *FactEvaluator) applyJSONPath(jsonPath interface{}, data []byte) (interface{}, error) {
 	if len(data) == 0 {
-		return nil, nil
+		return []interface{}{}, nil // Return empty array instead of nil
 	}
 
 	var jsonPathStr string
@@ -55,9 +58,12 @@ func (fe *FactEvaluator) applyJSONPath(jsonPath interface{}, data []byte) (inter
 	if err := json.Unmarshal(data, &jsonData); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON data: %w", err)
 	}
+	if jsonData == nil {
+		return []interface{}{}, nil
+	}
 
 	iter := query.Run(jsonData)
-	var results []interface{}
+	results := make([]interface{}, 0)
 	for {
 		v, ok := iter.Next()
 		if !ok {

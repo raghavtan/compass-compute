@@ -14,14 +14,14 @@ import (
 	"github.com/motain/compass-compute/internal/services"
 )
 
-func (fe *FactEvaluator) extractFromSource(ctx context.Context, fact *services.Fact) ([]byte, error) {
+func (fe *FactEvaluator) extractFromSource(ctx context.Context, fact *services.Fact, factMap map[string]*services.Fact) ([]byte, error) {
 
 	switch strings.ToLower(fact.Source) {
 
 	case "github":
 		return fe.extractFromGitHub(fact)
 	case "jsonapi", "api":
-		return fe.extractFromAPI(ctx, fact)
+		return fe.extractFromAPI(ctx, fact, factMap)
 	case "prometheus":
 		return fe.extractFromPrometheus(fact)
 	default:
@@ -35,8 +35,14 @@ func (fe *FactEvaluator) extractCustom(ctx context.Context, fact *services.Fact)
 }
 
 func (fe *FactEvaluator) extractFromGitHub(fact *services.Fact) ([]byte, error) {
+
 	if fact.Rule == "search" {
-		return fe.searchInRepo(fact.Repo, fact.SearchString)
+		search, err := fe.searchInRepo(fact.Repo, fact.SearchString)
+		if err != nil {
+			return nil, fmt.Errorf("failed to search in repository '%s': %w", fact.Repo, err)
+		}
+		fmt.Printf("Search result for '%s' in repository '%s': %s\n", fact.SearchString, fact.Rule, string(search))
+		return search, nil
 	}
 
 	if fact.FilePath == "" {
@@ -65,10 +71,25 @@ func (fe *FactEvaluator) extractFromGitHub(fact *services.Fact) ([]byte, error) 
 	return data, nil
 }
 
-func (fe *FactEvaluator) extractFromAPI(ctx context.Context, fact *services.Fact) ([]byte, error) {
+func (fe *FactEvaluator) extractFromAPI(ctx context.Context, fact *services.Fact, factMap map[string]*services.Fact) ([]byte, error) {
 	client := &http.Client{Timeout: 30 * time.Second}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", fact.URI, nil)
+	uri := fe.substituteDependencyValues(fact, factMap)
+
+	// If URI is empty (no dependencies to process), return appropriate empty result
+	if uri == "" {
+		// For recipients endpoint, return object with empty recipients array
+		if strings.Contains(fact.URI, "recipients") || strings.Contains(fact.URI, ":alert_id") {
+			emptyResponse := map[string]interface{}{
+				"recipients": []interface{}{},
+			}
+			return json.Marshal(emptyResponse)
+		}
+		// For other endpoints, return empty array
+		return json.Marshal([]interface{}{})
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", uri, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +121,42 @@ func (fe *FactEvaluator) extractFromAPI(ctx context.Context, fact *services.Fact
 }
 
 func (fe *FactEvaluator) extractFromPrometheus(fact *services.Fact) ([]byte, error) {
-	return json.Marshal(0.0)
+
+	if fe.prometheusService == nil {
+		return nil, fmt.Errorf("prometheus service not configured")
+	}
+	query := fact.PrometheusQuery
+	if query == "" {
+		return nil, fmt.Errorf("no query specified for prometheus source (use URI field)")
+	}
+
+	switch fact.Rule {
+	case "range":
+		start := time.Now().Add(-1 * time.Hour) // Default to 1 hour ago
+		end := time.Now()
+		step := 15 * time.Second // Default 15-second step
+		result, err := fe.prometheusService.RangeQuery(query, start, end, step)
+		if err != nil {
+			return nil, fmt.Errorf("prometheus range query failed: %w", err)
+		}
+		return json.Marshal(result)
+	case "instant", "":
+		// Default to instant query
+		result, err := fe.prometheusService.InstantQuery(query)
+		if err != nil {
+			return nil, fmt.Errorf("prometheus instant query failed: %w", err)
+		}
+		response := map[string]interface{}{
+			"value":     result,
+			"timestamp": time.Now().Unix(),
+			"query":     query,
+		}
+
+		return json.Marshal(response["value"])
+
+	default:
+		return nil, fmt.Errorf("unsupported prometheus rule: %s (use 'instant' or 'range')", fact.Rule)
+	}
 }
 
 func (fe *FactEvaluator) searchInRepo(repo, searchString string) ([]byte, error) {
@@ -134,4 +190,45 @@ func (fe *FactEvaluator) searchInRepo(repo, searchString string) ([]byte, error)
 	}
 
 	return json.Marshal(found)
+}
+
+func (fe *FactEvaluator) substituteDependencyValues(fact *services.Fact, factMap map[string]*services.Fact) string {
+	uri := fact.URI
+	deps := getDependencyResults(fact, factMap)
+
+	// If no dependencies are defined, return original URI
+	if len(fact.DependsOn) == 0 {
+		return uri
+	}
+
+	// If dependencies are defined but no results available, skip API call
+	if len(deps) == 0 {
+		return ""
+	}
+
+	// Check each dependency result
+	for _, dep := range deps {
+		// Handle string results (SLO IDs, Alert IDs)
+		if sloID, ok := dep.(string); ok {
+			uri = strings.ReplaceAll(uri, ":slo_id", sloID)
+			uri = strings.ReplaceAll(uri, ":alert_id", sloID)
+			continue
+		}
+
+		// Handle array results
+		if arr, ok := dep.([]interface{}); ok {
+			// If array is empty, skip API call
+			if len(arr) == 0 {
+				return ""
+			}
+			// Use first element of array for substitution
+			if firstItem, ok := arr[0].(string); ok {
+				uri = strings.ReplaceAll(uri, ":slo_id", firstItem)
+				uri = strings.ReplaceAll(uri, ":alert_id", firstItem)
+				continue
+			}
+		}
+	}
+
+	return uri
 }

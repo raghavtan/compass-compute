@@ -66,7 +66,6 @@ func Process(config *Config) error {
 			continue
 		}
 
-		// Convert result to string for submission
 		value := fmt.Sprintf("%v", evaluatedResult)
 
 		if config.Verbose {
@@ -78,9 +77,6 @@ func Process(config *Config) error {
 			continue
 		}
 
-		if config.Verbose {
-			fmt.Printf("Successfully submitted metric '%s'\n", metric.Name)
-		}
 		processed++
 	}
 

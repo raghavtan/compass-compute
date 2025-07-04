@@ -9,12 +9,12 @@ import (
 	"github.com/motain/compass-compute/internal/services"
 )
 
-func (fe *FactEvaluator) processExtract(ctx context.Context, fact *services.Fact) error {
+func (fe *FactEvaluator) processExtract(ctx context.Context, fact *services.Fact, factMap map[string]*services.Fact) error {
 	if fact.Source == "" {
 		return fmt.Errorf("source is required for extract fact type")
 	}
 
-	data, err := fe.extractFromSource(ctx, fact)
+	data, err := fe.extractFromSource(ctx, fact, factMap)
 	if err != nil {
 		return fmt.Errorf("extraction failed from source '%s': %w", fact.Source, err)
 	}

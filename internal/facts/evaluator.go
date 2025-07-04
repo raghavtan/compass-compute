@@ -9,12 +9,18 @@ import (
 )
 
 type FactEvaluator struct {
-	repoPath string
+	repoPath          string
+	prometheusService *services.PrometheusService
 }
 
 func NewFactEvaluator(repoPath string) *FactEvaluator {
+
+	client := services.NewPrometheusClient()
+	prometheusService := services.NewPrometheusService(client)
+
 	return &FactEvaluator{
-		repoPath: repoPath,
+		repoPath:          repoPath,
+		prometheusService: prometheusService,
 	}
 }
 
@@ -95,7 +101,7 @@ func (fe *FactEvaluator) processFact(ctx context.Context, fact *services.Fact, f
 
 	switch strings.ToLower(fact.Type) {
 	case "extract":
-		return fe.processExtract(ctx, fact)
+		return fe.processExtract(ctx, fact, factMap)
 	case "validate":
 		return fe.processValidate(fact, factMap)
 	case "aggregate":
