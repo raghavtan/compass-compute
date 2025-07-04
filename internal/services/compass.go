@@ -32,16 +32,16 @@ func (cs *CompassService) GetComponent(name string) (*Component, error) {
 		"slug":    ServiceSlugPrefix + name,
 	}
 
-	respData, err := cs.graphqlRequest(query, variables)
+	respData, err := cs.graphqlRequest(getComponentQuery, variables)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := json.Unmarshal(respData, &response); err != nil {
+	if err := json.Unmarshal(respData, &getComponentResponse); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	comp := response.Data.Compass.ComponentByReference
+	comp := getComponentResponse.Data.Compass.ComponentByReference
 	if comp.ID == "" {
 		return nil, fmt.Errorf("component not found: %s", name)
 	}
@@ -161,4 +161,38 @@ func (cs *CompassService) httpRequest(method, url string, payload interface{}) (
 	}
 
 	return respData, nil
+}
+
+func (cs *CompassService) GetAllComponentList() ([]string, error) {
+
+	variables := map[string]interface{}{
+		"cloudId": cs.cloudID,
+		"query": map[string]interface{}{
+			"first": 200,
+			"fieldFilters": map[string]interface{}{
+				"name": "state",
+				"filter": map[string]interface{}{
+					"neq": "PENDING",
+				},
+			},
+		},
+	}
+
+	respData, err := cs.graphqlRequest(getAllComponentQuery, variables)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(respData, &getAllComponentResponse); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	comp := getAllComponentResponse.Data.Compass.SearchComponents
+
+	var componentList []string
+	for _, node := range comp.Nodes {
+		componentList = append(componentList, node.Name)
+	}
+
+	return componentList, nil
 }

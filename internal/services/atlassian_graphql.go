@@ -1,6 +1,33 @@
 package services
 
-var query = `
+var getAllComponentQuery = `
+		query searchComponents($cloudId: String!, $query: CompassSearchComponentQuery!) {
+			compass {
+			  searchComponents(cloudId: $cloudId, query: $query) {
+				... on CompassSearchComponentConnection {
+				  nodes {
+					component {
+					  name
+					}
+				  }
+				}
+			  }
+			}
+		  }`
+
+var getAllComponentResponse struct {
+	Data struct {
+		Compass struct {
+			SearchComponents struct {
+				Nodes []struct {
+					Name string `json:"name"`
+				} `json:"nodes"`
+			} `json:"searchComponents"`
+		} `json:"compass"`
+	} `json:"data"`
+}
+
+var getComponentQuery = `
 		query getComponent($cloudId: ID!, $slug: String!) {
 			compass {
 				componentByReference(reference: {slug: {slug: $slug, cloudId: $cloudId}}) {
@@ -19,7 +46,7 @@ var query = `
 			}
 		}`
 
-var response struct {
+var getComponentResponse struct {
 	Data struct {
 		Compass struct {
 			ComponentByReference struct {
