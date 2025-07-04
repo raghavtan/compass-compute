@@ -8,8 +8,7 @@ import (
 )
 
 var (
-	verbose       bool
-	allComponents bool
+	verbose bool
 )
 
 func main() {
