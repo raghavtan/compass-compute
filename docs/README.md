@@ -1,97 +1,148 @@
-# compass-compute CLI
+# 🧭 compass-compute CLI
 
-A command-line interface (CLI) tool to manage compass components.
+> **Transform your component metrics with intelligent automation**
 
-## Overview
+A powerful command-line tool that intelligently evaluates and submits component metrics to Atlassian Compass. Whether you're tracking code quality, deployment frequency, or custom business metrics, compass-compute makes it effortless.
 
-`compass-compute` is a CLI tool designed to simplify the management and processing of various components within the compass ecosystem.
+---
 
-## Prerequisites
-
-- Go (version 1.18 or later)
-- Docker (latest version recommended)
-- Make
-
-## Usage
+## 🚀 Quick Start
 
 ```bash
-./compass-compute <component-name>
+# Install and run in 30 seconds
+make setup
+make  build
+./compass-compute compute my-service
+
+# Or with Docker
+make docker-build
+docker run compass-compute:latest compute my-service
 ```
 
-Replace `<component-name>` with the actual name of the component you want to process.
+**That's it!** Your component metrics are now automatically evaluated and submitted to Compass.
 
-## Building the CLI
+## 🏃‍♂️ Getting Started
 
-To build the CLI tool from the source code:
+### Prerequisites
+- Go 1.18+
+- Docker (optional)
+- Git
+- Access to Atlassian Compass
 
-1.  **Clone the repository (if you haven't already):**
-    ```bash
-    git clone <repository-url>
-    cd compass-compute
-    ```
+### Installation
 
-2.  **Build the binary:**
-    ```bash
-    make build
-    ```
-    This will create an executable file named `compass-compute` in the project's root directory.
-
-## Running Tests
-
-To run the automated tests:
-
+**Option 1: Build from Source** (Recommended for contributors)
 ```bash
-make test
+git clone <repository-url>
+cd compass-compute
+make setup    # Install development tools
+make build    # Build the binary
 ```
 
-## Linting
-
-To check the code for style and potential errors using `golangci-lint`:
-
-```bash
-make lint
-```
-It's recommended to run the linter before committing any changes.
-
-## Docker
-
-### Building the Docker Image
-
-To build a Docker image for the CLI:
-
+**Option 2: Docker** (Great for CI/CD)
 ```bash
 make docker-build
 ```
-This will use the `build/Dockerfile` to create a container image.
 
-### Running with Docker
+### Configuration
 
-Once the image is built (e.g., `compass-compute:latest`), you can run the CLI using Docker:
-
+Set up your environment variables:
 ```bash
-docker run compass-compute:latest <component-name>
+export COMPASS_API_TOKEN="your-compass-token"
+export COMPASS_CLOUD_ID="your-cloud-id"
+export GITHUB_TOKEN="your-github-token"
+export AWS_REGION="us-west-2"  # For Prometheus integration
+export PROMETHEUS_WORKSPACE_URL="your-prometheus-url"
 ```
 
-## Local Development Setup
+---
 
-To set up your local development environment, including installing necessary Go tools and linters:
+## 🎮 Usage Examples
 
+### Basic Usage
 ```bash
-make setup
+# Process metrics for a single component
+./compass-compute compute my-service
+
+# Process multiple components
+./compass-compute compute service-a,service-b,service-c
+
+# Enable detailed logging
+./compass-compute compute my-service --verbose
 ```
 
-## Makefile Targets
+### Advanced Scenarios
+```bash
+# Process with custom metric definitions
+METRIC_PATH=./custom-metrics ./compass-compute compute my-service
 
-The `Makefile` provides several useful targets:
+# Run in CI/CD pipeline
+docker run --env-file .env compass-compute:latest compute $SERVICE_NAME
+```
 
--   `setup`: Installs Go tools and linters.
--   `build`: Compiles the Go application.
--   `test`: Runs Go tests.
--   `lint`: Runs `golangci-lint`.
--   `docker-build`: Builds the Docker image using `build/Dockerfile`.
--   `clean`: Removes build artifacts and the compiled binary.
--   `all`: Runs `lint`, `test`, and `build`.
+---
 
-## Contributing
+## 📚 Documentation Hub
 
-[Details on how to contribute to this project - to be added]
+### 👋 **New Here?**
+- [📖 User Guide](docs/user-guide.md) - Complete walkthrough for end users
+- [🔧 Setup Guide](docs/setup.md) - Environment configuration and troubleshooting
+
+### 🛠️ **Building Metrics?**
+- [📊 Facts & Metrics Guide](docs/facts-and-metrics.md) - Everything about creating and managing metrics
+
+### 🚀 **Extending the Tool?**
+- [🔌 Extension Guide](docs/extending.md) - Add custom fact types, data sources, and rules
+- [🏗️ Architecture Guide](docs/architecture.md) - Understanding the codebase
+
+---
+
+## 🏗️ Architecture at a Glance
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   compass-compute   │────│   Facts Engine   │────│   Data Sources  │
+│        CLI          │    │                  │    │  • GitHub       │
+└─────────────────┘    │  • Extract          │    │  • Prometheus   │
+                       │  • Validate         │    │  • APIs         │
+                       │  • Aggregate        │    │  • Custom...    │
+                       └──────────────────┘    └─────────────────┘
+                                │
+                       ┌──────────────────┐
+                       │ Atlassian Compass │
+                       │   (Metrics API)   │
+                       └──────────────────┘
+```
+
+**Key Components:**
+- **CLI Interface**: Simple command-line interface for users
+- **Facts Engine**: Intelligent metric evaluation with dependency resolution
+- **Data Sources**: Pluggable extractors for different data sources
+- **Extensibility**: Add custom processors without modifying core code
+
+---
+
+## 🤔 Common Use Cases
+
+### 📈 **Code Quality Metrics**
+- Test coverage from GitHub Actions
+- Code complexity from static analysis
+- Security scan results from CI/CD
+
+### 🚀 **Deployment Metrics**
+- Deployment frequency from CI/CD systems
+- Lead time from issue tracking
+- MTTR from incident management tools
+
+### 📊 **Runtime Metrics**
+- Error rates from Prometheus
+- Response times from APM tools
+- Resource utilization from monitoring
+
+### 💼 **Business Metrics**
+- Feature adoption from analytics
+- Customer satisfaction scores
+- SLA compliance metrics
+
+
+
