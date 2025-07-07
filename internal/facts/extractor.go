@@ -41,7 +41,6 @@ func (fe *FactEvaluator) extractFromGitHub(fact *services.Fact) ([]byte, error) 
 		if err != nil {
 			return nil, fmt.Errorf("failed to search in repository '%s': %w", fact.Repo, err)
 		}
-		fmt.Printf("Search result for '%s' in repository '%s': %s\n", fact.SearchString, fact.Rule, string(search))
 		return search, nil
 	}
 

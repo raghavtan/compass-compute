@@ -20,7 +20,14 @@ REQUIRED ENVIRONMENT VARIABLES:
   COMPASS_API_TOKEN  Compass API authentication token
   COMPASS_CLOUD_ID   Compass cloud instance identifier
   AWS_REGION         AWS region for cloud resources (e.g., us-east-1)
-  AWS_ROLE           AWS IAM role ARN for authentication`,
+  AWS_ROLE           AWS IAM role ARN for authentication
+
+OPTIONAL ENVIRONMENT VARIABLES:
+  METRIC_DIR         Override metric directory source:
+                     - Local path: /path/to/local/metrics
+                     - Git repo: https://github.com/owner/repo.git/path/to/metrics
+                     - Git SSH: git@github.com:owner/repo.git/path/to/metrics
+                     - GitHub tree: https://github.com/owner/repo/tree/branch/path/to/metrics`,
 	Args: cobra.ExactArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return validateEnvironmentVariables()
@@ -42,7 +49,6 @@ func validateEnvironmentVariables() error {
 		"COMPASS_API_TOKEN",
 		"COMPASS_CLOUD_ID",
 		"AWS_REGION",
-		"AWS_ROLE",
 	}
 
 	var missing []string
@@ -72,12 +78,15 @@ func validateComponentName(names []string) error {
 }
 
 func AllCompute(componentList []string) error {
-
-	if strings.Contains(strings.Join(componentList, ","), "all") {
-		// Fetch all components from the catalog
-		// Update componentList to include all components
-		return fmt.Errorf("the 'all' option is not implemented yet, please specify component names")
+	if verbose {
+		fmt.Printf("Starting compass-compute for components: %s\n", strings.Join(componentList, ", "))
+		return nil
 	}
+	if allComponents {
+		fmt.Println("Computing metrics for all components is not yet implemented.")
+		return nil
+	}
+
 	for _, component := range componentList {
 		config := &compute.Config{
 			ComponentName: component,

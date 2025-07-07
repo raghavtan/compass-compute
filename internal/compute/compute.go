@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/motain/compass-compute/internal/facts"
-
 	"github.com/motain/compass-compute/internal/services"
 )
 
@@ -32,15 +31,33 @@ func Process(config *Config) error {
 	}
 
 	cloner := services.NewGitHubCloner(os.Getenv("GITHUB_TOKEN"))
-	repos := []string{config.ComponentName, services.CatalogRepo}
+
+	skipCatalogRepo, err := cloner.SetupMetricDirectory(config.Verbose)
+	if err != nil {
+		return fmt.Errorf("failed to setup metric directory: %w", err)
+	}
+
+	repos := []string{config.ComponentName}
+	if !skipCatalogRepo {
+		repos = append(repos, services.CatalogRepo)
+	}
 
 	for _, repo := range repos {
-		if err := cloner.Clone(services.GitHubOrg, repo, "./repos/"); err != nil {
+		if err := cloner.Clone(services.GitHubOrg, repo, services.LocalBasePath); err != nil {
 			return fmt.Errorf("failed to clone repository '%s': %w", repo, err)
 		}
 		if config.Verbose {
 			fmt.Printf("Successfully cloned repository: %s\n", repo)
 		}
+	}
+
+	metricPath := services.GetMetricLocalPath()
+	if _, err := os.Stat(metricPath); os.IsNotExist(err) {
+		return fmt.Errorf("metric directory not found at: %s", metricPath)
+	}
+
+	if config.Verbose {
+		fmt.Printf("Using metric directory: %s\n", metricPath)
 	}
 
 	// Process metrics

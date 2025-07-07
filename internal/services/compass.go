@@ -78,7 +78,7 @@ func (cs *CompassService) PutMetric(componentID, metricDefinitionID, value strin
 }
 
 func (cs *CompassService) GetMetricFacts(metricName, componentType string) ([]Fact, error) {
-	parser := NewMetricsParser(MetricLocalPath)
+	parser := NewMetricsParser(GetMetricLocalPath())
 	metrics, err := parser.ParseMetrics()
 	if err != nil {
 		return nil, err
