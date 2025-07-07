@@ -8,6 +8,6 @@ const (
 	GraphQLEndpoint   = CompassBaseURL + "/graphql"
 	MetricsEndpoint   = CompassBaseURL + "/compass/v1/metrics"
 	ServiceSlugPrefix = "svc-"
+	LocalBasePath     = "./repos/"
+	MetricLocalPath   = LocalBasePath + CatalogRepo + "/" + MetricPath
 )
-
-var MetricLocalPath = "./repos/" + CatalogRepo + "/" + MetricPath

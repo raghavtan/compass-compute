@@ -144,5 +144,3 @@ docker run --env-file .env compass-compute:latest compute $SERVICE_NAME
 - Customer satisfaction scores
 - SLA compliance metrics
 
-
-
