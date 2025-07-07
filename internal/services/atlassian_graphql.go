@@ -20,7 +20,9 @@ var getAllComponentResponse struct {
 		Compass struct {
 			SearchComponents struct {
 				Nodes []struct {
-					Name string `json:"name"`
+					Component struct {
+						Name string `json:"name"`
+					} `json:"component"`
 				} `json:"nodes"`
 			} `json:"searchComponents"`
 		} `json:"compass"`

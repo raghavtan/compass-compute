@@ -191,7 +191,7 @@ func (cs *CompassService) GetAllComponentList() ([]string, error) {
 
 	var componentList []string
 	for _, node := range comp.Nodes {
-		componentList = append(componentList, node.Name)
+		componentList = append(componentList, node.Component.Name)
 	}
 
 	return componentList, nil

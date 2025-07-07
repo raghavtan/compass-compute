@@ -1,146 +1,207 @@
-# 🧭 compass-compute CLI
+# 📖 compass-compute Documentation
 
-> **Transform your component metrics with intelligent automation**
+> **Everything you need to know about compass-compute**
 
-A powerful command-line tool that intelligently evaluates and submits component metrics to Atlassian Compass. Whether you're tracking code quality, deployment frequency, or custom business metrics, compass-compute makes it effortless.
+## Quick Navigation
 
----
+| 🎯 What do you want to do? | 📚 Guide | ⏱️ Time |
+|----------------------------|----------|--------|
+| **Get it running locally** | [Setup Guide](setup.md) | 5 min |
+| **Create my first metric** | [Facts & Metrics](facts-guide.md) | 10 min |
+| **Add custom data sources** | [Extensions Guide](extensions.md) | 15 min |
+| **Fix broken things**      | [Debugging Guide](debugging.md) | 8 min |
+| **Architecture**           | [architecture.md](architecture.md) | 8 min |
 
-## 🚀 Quick Start
 
-```bash
-# Install and run in 30 seconds
-make setup
-make  build
-./compass-compute compute my-service
+## Understanding compass-compute
 
-# Or with Docker
-make docker-build
-docker run compass-compute:latest compute my-service
-```
+### What It Does
+compass-compute evaluates component metrics using a **fact-based engine**:
 
-**That's it!** Your component metrics are now automatically evaluated and submitted to Compass.
+1. **Extracts** data from sources (GitHub, APIs, Prometheus)
+2. **Validates** data meets criteria
+3. **Aggregates** results into final scores
+4. **Submits** to Atlassian Compass
 
-## 🏃‍♂️ Getting Started
+### Key Concepts
+- **Facts**: Individual data operations (extract, validate, aggregate)
+- **Metrics**: Collections of facts that produce scores
+- **Sources**: Where data comes from (github, api, prometheus)
+- **Rules**: How data is processed (jsonpath, regex, count)
 
-### Prerequisites
-- Go 1.18+
-- Docker (optional)
-- Git
-- Access to Atlassian Compass
-
-### Installation
-
-**Option 1: Build from Source** (Recommended for contributors)
-```bash
-git clone <repository-url>
-cd compass-compute
-make setup    # Install development tools
-make build    # Build the binary
-```
-
-**Option 2: Docker** (Great for CI/CD)
-```bash
-make docker-build
-```
-
-### Configuration
-
-Set up your environment variables:
-```bash
-export COMPASS_API_TOKEN="your-compass-token"
-export COMPASS_CLOUD_ID="your-cloud-id"
-export GITHUB_TOKEN="your-github-token"
-export AWS_REGION="us-west-2"  # For Prometheus integration
-export PROMETHEUS_WORKSPACE_URL="your-prometheus-url"
-```
-
----
-
-## 🎮 Usage Examples
-
-### Basic Usage
-```bash
-# Process metrics for a single component
-./compass-compute compute my-service
-
-# Process multiple components
-./compass-compute compute service-a,service-b,service-c
-
-# Enable detailed logging
-./compass-compute compute my-service --verbose
-```
-
-### Advanced Scenarios
-```bash
-# Process with custom metric definitions
-METRIC_PATH=./custom-metrics ./compass-compute compute my-service
-
-# Run in CI/CD pipeline
-docker run --env-file .env compass-compute:latest compute $SERVICE_NAME
-```
-
----
-
-## 📚 Documentation Hub
-
-### 👋 **New Here?**
-- [📖 User Guide](docs/user-guide.md) - Complete walkthrough for end users
-- [🔧 Setup Guide](docs/setup.md) - Environment configuration and troubleshooting
-
-### 🛠️ **Building Metrics?**
-- [📊 Facts & Metrics Guide](docs/facts-and-metrics.md) - Everything about creating and managing metrics
-
-### 🚀 **Extending the Tool?**
-- [🔌 Extension Guide](docs/extending.md) - Add custom fact types, data sources, and rules
-- [🏗️ Architecture Guide](docs/architecture.md) - Understanding the codebase
-
----
-
-## 🏗️ Architecture at a Glance
-
+### Architecture Overview
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   compass-compute   │────│   Facts Engine   │────│   Data Sources  │
-│        CLI          │    │                  │    │  • GitHub       │
-└─────────────────┘    │  • Extract          │    │  • Prometheus   │
-                       │  • Validate         │    │  • APIs         │
-                       │  • Aggregate        │    │  • Custom...    │
-                       └──────────────────┘    └─────────────────┘
-                                │
+│      CLI        │────│  Facts Engine    │────│  Data Sources   │
+│   (compute)     │    │                  │    │                 │
+└─────────────────┘    │  • Extract       │    │  • GitHub       │
+                       │  • Validate      │    │  • Prometheus   │
+                       │  • Aggregate     │    │  • APIs         │
+                       └──────────────────┘    │  • Custom...    │
+                                │               └─────────────────┘
                        ┌──────────────────┐
                        │ Atlassian Compass │
                        │   (Metrics API)   │
                        └──────────────────┘
 ```
 
-**Key Components:**
-- **CLI Interface**: Simple command-line interface for users
-- **Facts Engine**: Intelligent metric evaluation with dependency resolution
-- **Data Sources**: Pluggable extractors for different data sources
-- **Extensibility**: Add custom processors without modifying core code
+## Code Structure
+
+```
+compass-compute/
+├── cmd/                    # CLI commands
+│   ├── main.go            # Entry point
+│   └── compute.go         # Main compute command
+├── internal/
+│   ├── services/          # External integrations
+│   │   ├── compass.go     # Compass API client
+│   │   ├── prometheus_service.go  # Prometheus client
+│   │   ├── github.go      # GitHub operations  
+│   │   ├── metrics.go     # YAML metric parser
+│   │   └── models.go      # Data structures
+│   ├── facts/             # Facts evaluation engine
+│   │   ├── evaluator.go   # Main evaluation logic
+│   │   ├── extractor.go   # Data extraction (sources)
+│   │   ├── processor.go   # Fact processing (types)
+│   │   ├── appliers.go    # Rule application
+│   │   └── helpers.go     # Utilities
+│   └── compute/           # Business logic orchestration
+│       └── compute.go     # Main workflow
+└── docs/                  # Documentation
+```
+
+## Extension Points
+
+### 🔧 Where to Add Custom Logic
+
+| What | Where | Function |
+|------|-------|----------|
+| **Custom fact types** | `internal/facts/evaluator.go` | `processCustom()` |
+| **Custom data sources** | `internal/facts/extractor.go` | `extractCustom()` |
+| **Custom processing rules** | `internal/facts/appliers.go` | `applyCustomRule()` |
+| **New integrations** | `internal/services/` | New service files |
+
+### 🎯 Common Extensions
+
+- **Kubernetes**: Pod counts, resource usage
+- **Databases**: Query results, health checks
+- **Security**: Vulnerability scans, compliance
+- **AI/ML**: Code analysis, predictions
+- **Business**: Custom calculations, KPIs
+
+## Quick Reference
+
+### Environment Variables
+```bash
+# Required
+COMPASS_API_TOKEN="your-compass-token"
+COMPASS_CLOUD_ID="your-cloud-id"
+GITHUB_TOKEN="your-github-token"
+
+# For Prometheus
+AWS_REGION="us-east-1"
+PROMETHEUS_WORKSPACE_URL="https://aps-workspaces..."
+
+# Optional
+METRIC_DIR="/custom/metrics/path"
+```
+
+### Common Commands
+```bash
+# Basic usage
+./compass-compute compute my-service
+
+# With debugging
+./compass-compute compute my-service --verbose
+
+# Multiple services
+./compass-compute compute service-a,service-b
+
+# Docker
+docker run --env-file .env compass-compute:latest compute my-service
+```
+
+### Metric YAML Template
+```yaml
+apiVersion: v1
+kind: Metric
+metadata:
+  name: my-metric
+  componentType: ["service"]
+  facts:
+    - id: extract-data
+      type: extract
+      source: github
+      repo: ${Metadata.Name}
+      filePath: package.json
+      rule: jsonpath
+      jsonPath: ".version"
+      
+    - id: validate-version
+      type: validate
+      dependsOn: [extract-data]
+      rule: regex_match
+      pattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+```
+
+## Troubleshooting Quick Fixes
+
+| Problem | Quick Fix |
+|---------|-----------|
+| "Component not found" | Check component name exists in Compass UI |
+| "Repository not found" | Verify GitHub token has repo access |
+| "No facts found" | Check componentType matches your service |
+| "AWS credentials" | Configure AWS CLI or check region |
+| "JSONPath failed" | Test expression at jsonpath.com |
+
+## Contributing
+
+### Development Setup
+```bash
+git clone <repo-url>
+cd compass-compute
+make setup    # Install tools
+make test     # Run tests
+make build    # Build binary
+```
+
+### Adding Features
+1. **Small changes**: Edit relevant files directly
+2. **New fact types**: Follow extension patterns
+3. **New integrations**: Add to services layer
+4. **Bug fixes**: Add tests first
+
+### Testing
+```bash
+make test                    # Unit tests
+make integration-test        # Integration tests
+./compass-compute compute test-service --verbose  # Manual testing
+```
+
+## Support
+
+### Getting Help
+1. **Check the guides** - Most issues are covered
+2. **Use verbose mode** - `--verbose` shows what's happening
+3. **Test components** - Verify each piece works
+4. **Check examples** - Look at existing metric definitions
+
+### Reporting Issues
+Include:
+- Full verbose output
+- Environment setup (redacted)
+- Component name and type
+- Metric definitions used
+- Expected vs actual behavior
 
 ---
 
-## 🤔 Common Use Cases
+**Ready to get started?** → [Setup Guide](setup.md)
 
-### 📈 **Code Quality Metrics**
-- Test coverage from GitHub Actions
-- Code complexity from static analysis
-- Security scan results from CI/CD
+**Need to create metrics?** → [Facts & Metrics Guide](facts-guide.md)
 
-### 🚀 **Deployment Metrics**
-- Deployment frequency from CI/CD systems
-- Lead time from issue tracking
-- MTTR from incident management tools
+**Want to extend functionality?** → [Extensions Guide](extensions.md)
 
-### 📊 **Runtime Metrics**
-- Error rates from Prometheus
-- Response times from APM tools
-- Resource utilization from monitoring
+**Something broken?** → [Debugging Guide](debugging.md)
 
-### 💼 **Business Metrics**
-- Feature adoption from analytics
-- Customer satisfaction scores
-- SLA compliance metrics
-
+**Want to understand the architecture?** → [Architecture Overview](architecture.md)
